@@ -138,7 +138,7 @@ impl IgnitionPayContract {
     }
 
     pub fn version(env: Env) -> Symbol {
-        env.storage().instance().get(&Symbol::new(&env, VERSION_KEY)).unwrap_or_else(|| panic!("Version not set"))
+        env.storage().instance().get(&Symbol::new(&env, VERSION_KEY)).unwrap_or_else(|| Symbol::new(&env, CONTRACT_VERSION))
     }
 
     pub fn upgrade(env: Env, new_wasm_hash: BytesN<32>) {
