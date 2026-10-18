@@ -57,6 +57,47 @@ fn test_authorization() {
 }
 
 #[test]
+fn test_revoke_emits_event_only_when_authorization_is_removed() {
+    let env = Env::default();
+    let admin = Address::random(&env);
+    let user = Address::random(&env);
+    let contract_id = env.register_contract(None, IgnitionPayContract);
+    let contract = IgnitionPayContractClient::new(&env, &contract_id);
+
+    contract.initialize(&admin);
+    contract.set_kyc_status(&user, &true);
+    contract.authorize(&user);
+    contract.revoke(&user);
+
+    let events = env.events().all();
+    let revoked_topic = Symbol::new(&env, "authorization_revoked");
+    let revoked_events: soroban_sdk::Vec<_> = events
+        .iter()
+        .filter(|(event_contract, topics, data)| {
+            if event_contract != &contract_id {
+                return false;
+            }
+
+            let topics: Vec<soroban_sdk::Val> = Vec::from_val(&env, topics);
+            if topics.len() != 2 {
+                return false;
+            }
+
+            let topic: Symbol = topics.get(0).unwrap().try_into_val(&env).unwrap();
+            let event_admin: Address = topics.get(1).unwrap().try_into_val(&env).unwrap();
+            let event_user: Address = data.clone().try_into_val(&env).unwrap();
+            topic == revoked_topic && event_admin == admin && event_user == user
+        })
+        .collect();
+
+    assert_eq!(revoked_events.len(), 1);
+
+    contract.revoke(&user);
+    let events_after_noop_revoke = env.events().all();
+    assert_eq!(events_after_noop_revoke.len(), events.len());
+}
+
+#[test]
 #[should_panic(expected = "KYC not completed")]
 fn test_authorize_kyc_not_completed() {
     let env = Env::default();
