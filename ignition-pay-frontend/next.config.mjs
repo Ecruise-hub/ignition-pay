@@ -22,4 +22,4 @@ export default withSentryConfig(nextConfig, {
   disableServerWebpackPlugin: false,
   autoInstrumentServerSideSpans: true,
   autoInstrumentClientSideSpans: true,
-})
+});
