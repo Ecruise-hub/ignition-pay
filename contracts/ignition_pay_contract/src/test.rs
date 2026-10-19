@@ -151,6 +151,14 @@ fn test_version() {
 }
 
 #[test]
+fn test_version_falls_back_when_storage_is_unseeded() {
+    let env = Env::default();
+    let contract = create_contract(&env);
+
+    assert_eq!(contract.version().to_string(), "0.1.0");
+}
+
+#[test]
 fn test_transfer_admin() {
     let env = Env::default();
     let admin = Address::random(&env);
