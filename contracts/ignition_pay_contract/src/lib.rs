@@ -19,6 +19,9 @@ const MAX_PROPOSAL_TITLE_BYTES: u32 = 256;
 /// Default maximum move (in basis points) a single `PriceFeedContract`
 /// observation may make relative to the previous accepted price.
 const DEFAULT_MAX_PRICE_DEVIATION_BPS: u32 = 5_000;
+/// Storage key for the operator role set. Stored as a `Map<Address, bool>` so
+/// membership checks are O(1) instead of a linear scan over a `Vec`.
+const OPERATORS_KEY: &str = "operators";
 
 #[contracttype]
 #[derive(Clone)]
@@ -108,6 +111,19 @@ impl IgnitionPayContract {
             authorizations.remove(index as u32);
         }
         env.storage().instance().set(&Symbol::new(&env, AUTHORIZATIONS_KEY), &authorizations);
+    }
+
+    /// Check whether `user` holds the operator role.
+    ///
+    /// Operators are stored in a `Map<Address, bool>` so this lookup is O(1)
+    /// rather than the previous linear `Vec::contains` scan.
+    pub fn has_operator_role(env: Env, user: Address) -> bool {
+        let operators: Map<Address, bool> = env
+            .storage()
+            .instance()
+            .get(&Symbol::new(&env, OPERATORS_KEY))
+            .unwrap_or_else(|| Map::new(&env));
+        operators.get(user).unwrap_or(false)
     }
 
     /// Check if a user is authorized.
