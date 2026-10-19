@@ -5,8 +5,6 @@ backups/
 *.dump
 
 # Local environment files (per-package .gitignore also covers these)
-.env
-.env.*
 !.env.example
 
 # Docker Compose local overrides
@@ -32,5 +30,5 @@ Flutter/
 .metadata
 
 # IDE
-.vscode/
 .DS_Store
+config.bat
