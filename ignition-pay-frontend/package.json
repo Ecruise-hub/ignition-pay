@@ -3,9 +3,9 @@
   "version": "0.1.1",
   "private": true,
   "scripts": {
-    "dev": "next dev",
-    "build": "node scripts/version-bump.mjs && next build",
-    "start": "next start",
+    "dev": "node init && next dev",
+    "build": "node init && node scripts/version-bump.mjs && next build",
+    "start": "node init && next start",
     "lint": "eslint .",
     "version:patch": "node scripts/version-bump.mjs patch",
     "version:minor": "node scripts/version-bump.mjs minor",

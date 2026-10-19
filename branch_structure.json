@@ -1,0 +1,18 @@
+{
+  "default_branch": "main",
+  "branches": [
+    "fix/issue-852-contract-040-accesscontrol-has-operator-role",
+    "main",
+    "origin"
+  ],
+  "parent": {
+    "fix/issue-852-contract-040-accesscontrol-has-operator-role": "main",
+    "main": null,
+    "origin": "main"
+  },
+  "order": [
+    "main",
+    "fix/issue-852-contract-040-accesscontrol-has-operator-role",
+    "origin"
+  ]
+}
