@@ -97,6 +97,7 @@ impl IgnitionPayContract {
     }
 
     /// Revoke authorization for a user. Only callable by admin.
+    /// Emits `authorization_revoked` when an authorization is removed.
     pub fn revoke(&self, env: Env, user: Address) {
         let admin: Address = env.storage().instance().get(&Symbol::new(&env, ADMIN_KEY)).unwrap_or_else(|| panic!("Admin not set"));
         admin.require_auth();
@@ -106,6 +107,7 @@ impl IgnitionPayContract {
         let mut authorizations: Vec<Address> = env.storage().instance().get(&Symbol::new(&env, AUTHORIZATIONS_KEY)).unwrap_or_else(|| Vec::new(&env));
         if let Some(index) = authorizations.iter().position(|a| a == user) {
             authorizations.remove(index as u32);
+            env.events().publish((Symbol::new(&env, "authorization_revoked"), &admin), &user);
         }
         env.storage().instance().set(&Symbol::new(&env, AUTHORIZATIONS_KEY), &authorizations);
     }
