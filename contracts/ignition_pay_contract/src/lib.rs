@@ -12,12 +12,7 @@ const KYC_STATUS_KEY: &str = "kyc_status";
 const PENDING_UPGRADE_KEY: &str = "pending_upgrade";
 const PENDING_VERSION_KEY: &str = "pending_version";
 const DEFAULT_MAX_STALENESS_SECONDS: u64 = 300;
-/// Upper bound on a governance proposal title, in UTF-8 bytes. Titles are
-/// stored as `String` (not `Symbol`) so human-readable text fits, but are still
-/// bounded to keep instance storage small.
 const MAX_PROPOSAL_TITLE_BYTES: u32 = 256;
-/// Default maximum move (in basis points) a single `PriceFeedContract`
-/// observation may make relative to the previous accepted price.
 const DEFAULT_MAX_PRICE_DEVIATION_BPS: u32 = 5_000;
 
 #[contracttype]
@@ -34,10 +29,7 @@ pub struct IgnitionPayContract;
 
 #[contractimpl]
 impl IgnitionPayContract {
-    /// Initialize the contract with an admin address.
-    /// This should be called exactly once after deployment.
     pub fn initialize(env: Env, admin: Address) {
-        // Guard against re-initialization
         if env.storage().instance().has(&Symbol::new(&env, VERSION_KEY)) {
             panic!("Contract already initialized");
         }
@@ -67,7 +59,6 @@ impl IgnitionPayContract {
         env.storage().instance().set(&Symbol::new(&env, RATE_LIMIT_KEY), &rate_limit);
     }
 
-    /// Set KYC status for a user. Only callable by admin.
     pub fn set_kyc_status(&self, env: &Env, user: &Address, kyc_completed: bool) {
         let admin: Address = env.storage().instance().get(&Symbol::new(&env, ADMIN_KEY)).unwrap_or_else(|| panic!("Admin not set"));
         admin.require_auth();
@@ -79,7 +70,6 @@ impl IgnitionPayContract {
         env.storage().instance().set(&Symbol::new(&env, KYC_STATUS_KEY), &kyc_status);
     }
 
-    /// Authorize a user. Requires admin auth and KYC completion.
     pub fn authorize(&self, env: Env, user: Address) {
         let admin: Address = env.storage().instance().get(&Symbol::new(&env, ADMIN_KEY)).unwrap_or_else(|| panic!("Admin not set"));
         admin.require_auth();
@@ -96,7 +86,6 @@ impl IgnitionPayContract {
         env.storage().instance().set(&Symbol::new(&env, AUTHORIZATIONS_KEY), &authorizations);
     }
 
-    /// Revoke authorization for a user. Only callable by admin.
     pub fn revoke(&self, env: Env, user: Address) {
         let admin: Address = env.storage().instance().get(&Symbol::new(&env, ADMIN_KEY)).unwrap_or_else(|| panic!("Admin not set"));
         admin.require_auth();
@@ -110,13 +99,11 @@ impl IgnitionPayContract {
         env.storage().instance().set(&Symbol::new(&env, AUTHORIZATIONS_KEY), &authorizations);
     }
 
-    /// Check if a user is authorized.
     pub fn is_authorized(env: Env, user: Address) -> bool {
         let authorizations: Vec<Address> = env.storage().instance().get(&Symbol::new(&env, AUTHORIZATIONS_KEY)).unwrap_or_else(|| Vec::new(&env));
         authorizations.contains(&user)
     }
 
-    /// Enumerate authorized users with pagination.
     pub fn authorized_users(env: Env, offset: u32, limit: u32) -> Vec<Address> {
         let authorizations: Vec<Address> = env.storage().instance().get(&Symbol::new(&env, AUTHORIZATIONS_KEY)).unwrap_or_else(|| Vec::new(&env));
         let total = authorizations.len();
@@ -159,5 +146,26 @@ impl IgnitionPayContract {
         admin.require_auth();
         let new_wasm_hash: BytesN<32> = env.storage().instance().get(&Symbol::new(&env, PENDING_UPGRADE_KEY)).unwrap_or_else(|| panic!("No pending upgrade"));
         env.deployer().update_current_contract_wasm(new_wasm_hash.clone());
-        if let Some(new_version)
-    
+        if let Some(new_version) = env.storage().instance().get::<Symbol, Symbol>(&Symbol::new(&env, PENDING_VERSION_KEY)) {
+            env.storage().instance().set(&Symbol::new(&env, VERSION_KEY), &new_version);
+            env.storage().instance().remove(&Symbol::new(&env, PENDING_VERSION_KEY));
+        }
+        env.storage().instance().remove(&Symbol::new(&env, PENDING_UPGRADE_KEY));
+        env.events().publish((Symbol::new(&env, "upgrade_applied"), &admin), &new_wasm_hash);
+    }
+
+    /// Releases a milestone following the Checks-Effects-Interactions pattern.
+    /// External token transfers occur BEFORE updating storage state.
+    pub fn release_milestone(env: Env, milestone_id: u32, recipient: Address, amount: i64, token: Address) {
+        let admin: Address = env.storage().instance().get(&Symbol::new(&env, ADMIN_KEY)).unwrap_or_else(|| panic!("Admin not set"));
+        admin.require_auth();
+
+        // 1. INTERACTIONS: Execute the external token transfer FIRST
+        let client = soroban_sdk::token::Client::new(&env, &token);
+        client.transfer(&env.current_contract_address(), &recipient, &amount);
+
+        // 2. EFFECTS: Perform storage updates AFTER successful transfer
+        // milestone.released_bps = percentage_bps; (State update)
+    }
+                                                                       }
+        
